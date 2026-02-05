@@ -1,0 +1,191 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.line.me/v2/bot/message/reply",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "lineMessagingApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'text', text: $json.text, quickReply: { items: $json.quickReplyItems } }] }) }}"
+            },
+            "id": "unified-qr-reply",
+            "name": "統一QuickReply回覆",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                3500,
+                100
+            ],
+            "credentials": {
+                "lineMessagingApi": {
+                    "id": "UiiMHjlAZGMI80LW",
+                    "name": "打卡機器人"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.line.me/v2/bot/message/reply",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "lineMessagingApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'flex', altText: $json.altText || $json.text, contents: $json.flexContents }] }) }}"
+            },
+            "id": "unified-flex-reply",
+            "name": "統一Flex回覆",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                3500,
+                300
+            ],
+            "credentials": {
+                "lineMessagingApi": {
+                    "id": "UiiMHjlAZGMI80LW",
+                    "name": "打卡機器人"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.line.me/v2/bot/message/reply",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "lineMessagingApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'text', text: $json.text }] }) }}"
+            },
+            "id": "unified-text-reply",
+            "name": "統一文字回覆",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                3500,
+                500
+            ],
+            "credentials": {
+                "lineMessagingApi": {
+                    "id": "UiiMHjlAZGMI80LW",
+                    "name": "打卡機器人"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "combinator": "and"
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.replyType }}",
+                                        "rightValue": "quickReply",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ]
+                            },
+                            "renameOutput": true,
+                            "outputKey": "quickReply"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "combinator": "and"
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.replyType }}",
+                                        "rightValue": "flex",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ]
+                            },
+                            "renameOutput": true,
+                            "outputKey": "flex"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            },
+            "id": "reply-type-switch",
+            "name": "回覆類型判斷",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.1,
+            "position": [
+                3280,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "回覆類型判斷": {
+            "main": [
+                [
+                    {
+                        "node": "統一QuickReply回覆",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "統一Flex回覆",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "統一文字回覆",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {}
+}

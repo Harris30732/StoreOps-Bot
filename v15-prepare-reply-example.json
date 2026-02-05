@@ -1,0 +1,19 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "jsCode": "// 範例：從前一節點取得資料\nconst d = $('讀取狀態與翻譯').item.json;\nconst t = d.t;\n\n// 依據情境準備回覆訊息\n// replyType: 'text' | 'quickReply' | 'flex'\n\n// --- 範例 1: 純文字回覆 ---\n// return {\n//   json: {\n//     replyToken: d.replyToken,\n//     replyType: 'text',\n//     text: t.cancel\n//   }\n// };\n\n// --- 範例 2: QuickReply 回覆 ---\n// const stores = $('讀取分店清單').all();\n// const items = stores.filter(s => s.json.分店清單).map(s => ({\n//   type: 'action',\n//   action: { type: 'message', label: '🏪 ' + s.json.分店清單, text: s.json.分店清單 }\n// }));\n// items.push({ type: 'action', action: { type: 'message', label: '❌ 取消', text: '取消' } });\n// return {\n//   json: {\n//     replyToken: d.replyToken,\n//     replyType: 'quickReply',\n//     text: t.storeList,\n//     quickReplyItems: items\n//   }\n// };\n\n// --- 範例 3: Flex Message 回覆 ---\n// return {\n//   json: {\n//     replyToken: d.replyToken,\n//     replyType: 'flex',\n//     text: '語言選單',\n//     altText: '請選擇語言',\n//     flexContents: {\n//       type: 'bubble',\n//       body: {\n//         type: 'box',\n//         layout: 'vertical',\n//         contents: [...]\n//       }\n//     }\n//   }\n// };\n\n// 預設回傳純文字\nreturn {\n  json: {\n    replyToken: d.replyToken,\n    replyType: 'text',\n    text: '這是測試訊息'\n  }\n};"
+            },
+            "id": "prepare-reply-example",
+            "name": "準備回覆訊息(範例)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3060,
+                300
+            ]
+        }
+    ],
+    "connections": {},
+    "pinData": {}
+}

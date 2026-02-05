@@ -1,0 +1,103 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "G_SHEET_ID",
+              "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o"
+            },
+            {
+              "name": "G_DRIVE_FOLDER_ID",
+              "value": "1k4rfsjHYYXO8He7MUbTZoNJivDJkcn2a"
+            }
+          ]
+        }
+      },
+      "id": "config-node",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4272,
+        -250
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $('Error Trigger').item.json.body.events[0].replyToken, messages: [{ type: 'text', text: '⚠️ 系統暫時無法回應，請稍後再試。' }] }) }}",
+        "options": {}
+      },
+      "id": "error-reply",
+      "name": "報錯回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -800,
+        1000
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "擷取訊息資訊",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "報錯回覆",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e6bf353f395904dafe49aea994919de0f3fad34808b813e6b38887371480eaeb"
+  }
+}
