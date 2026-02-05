@@ -1,0 +1,4168 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "LineWebhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -4288,
+        176
+      ],
+      "id": "c9b9a1e7-7f46-49ec-8701-b880451a24c3",
+      "name": "LINE Webhook",
+      "webhookId": "33bf5535-b41e-4285-ad67-41d644938ae9"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "userId",
+              "name": "userId",
+              "value": "={{ $json.body.events[0].source.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "replyToken",
+              "name": "replyToken",
+              "value": "={{ $json.body.events[0].replyToken }}",
+              "type": "string"
+            },
+            {
+              "id": "eventType",
+              "name": "eventType",
+              "value": "={{ $json.body.events[0].type }}",
+              "type": "string"
+            },
+            {
+              "id": "msgType",
+              "name": "msgType",
+              "value": "={{ $json.body.events[0].message?.type || 'postback' }}",
+              "type": "string"
+            },
+            {
+              "id": "msgText",
+              "name": "msgText",
+              "value": "={{ $json.body.events[0].message?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "postbackData",
+              "name": "postbackData",
+              "value": "={{ $json.body.events[0].postback?.data || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "msgId",
+              "name": "msgId",
+              "value": "={{ $json.body.events[0].message?.id || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "72ee5a0c-d0aa-4549-a62a-fd948596f7cd",
+      "name": "擷取訊息資訊",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3856,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "UserID",
+              "lookupValue": "={{ $json.userId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34f27a9d-5d19-4d41-b05f-9b8716cece2a",
+      "name": "查詢員工表",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -3632,
+        208
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "found",
+              "leftValue": "={{ $json.UserID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4d5945dd-be6b-446f-9642-4445d574f791",
+      "name": "員工是否存在",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -3408,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getProfile",
+        "userId": "={{ $('擷取訊息資訊').item.json.userId }}"
+      },
+      "id": "964ecdb8-fd2f-44c4-8104-50aec0583c32",
+      "name": "取得LINE個資",
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        -3088,
+        320
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('擷取訊息資訊').item.json.userId }}",
+            "current_step": "WAIT_LANG",
+            "暱稱": "={{ $json.profile ? $json.profile.displayName : ($json.displayName || '') }}",
+            "last_active": "={{ new Date().getTime() }}",
+            "Language": "zh-TW"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "006c353e-49ad-43f9-8980-6da9acdb34e5",
+      "name": "建立新員工",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2912,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('擷取訊息資訊').item.json;\nconst flexContents = {\n  type: 'bubble',\n  body: {\n    type: 'box',\n    layout: 'vertical',\n    contents: [\n      { type: 'text', text: '👋 歡迎加入！/ Chào mừng!', weight: 'bold', size: 'lg', align: 'center' },\n      { type: 'separator', margin: 'md' },\n      {\n        type: 'box',\n        layout: 'horizontal',\n        margin: 'lg',\n        spacing: 'sm',\n        contents: [\n          { type: 'button', style: 'primary', color: '#06C755', action: { type: 'postback', label: '🇹🇼 繁體中文', data: 'action=lang&value=zh-TW' } },\n          { type: 'button', style: 'secondary', action: { type: 'postback', label: '🇻🇳 Tiếng Việt', data: 'action=lang&value=vi-VN' } }\n        ]\n      }\n    ]\n  }\n};\nreturn {\n  json: {\n    replyToken: d.replyToken,\n    replyType: 'flex',\n    text: '請選擇語言',\n    altText: '請選擇語言',\n    flexContents: flexContents\n  }\n};"
+      },
+      "id": "a1267d1b-4e26-4266-bf9e-fa873632715b",
+      "name": "回覆語言選單",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const emp = $('查詢員工表').item.json;\nconst input = $('擷取訊息資訊').item.json;\nconst now = new Date();\nconst lastActive = emp.last_active ? new Date(isNaN(Number(emp.last_active)) ? emp.last_active : Number(emp.last_active)) : new Date(0);\nconst TIMEOUT_MS = 10 * 60 * 1000;\nconst isTimeout = (now - lastActive) > TIMEOUT_MS && emp.current_step && emp.current_step !== 'IDLE';\nconst pbData = input.postbackData || '';\nconst pbParams = {};\npbData.split('&').forEach(p => { const [k, v] = p.split('='); if (k && v) pbParams[k] = decodeURIComponent(v); });\nconst MSG = {'zh-TW': {timeout: '⏰ 操作逾時', cancel: '✅ 已取消', selectStore: '請選擇門市 👇', storeList: '請選擇門市 👇', photoIn: '📸 請拍攝上班照', photoOut: '📸 請拍攝下班照', photoId: '📸 請拍攝證件照', askPhoto: '📸 請拍攝證件照', wrongInput: '❓ 請依指示操作', regOk: '✅ 註冊成功！', inOk: '✅ 上班成功！', outOk: '✅ 下班成功！', help: '📋 指令：上班/下班/取消', noClockIn: '⚠️ 今日尚未打上班卡', askRevenue: '💰 請輸入當前業績:', revenueOk: '✅ 已記錄業績', welcome: '歡迎加入！', selectLang: '請選擇語言', helper: '✨ 您是今日小幫手 (免業績)', opener: '🎯 您是首位開攤', midshift: '🕒 中途上班，請先輸入業績'}, 'vi-VN': {timeout: '⏰ Hết giờ', cancel: '✅ Đã hủy', selectStore: 'Chọn cửa hàng 👇', storeList: 'Chọn cửa hàng 👇', photoIn: '📸 Chụp ảnh đi làm', photoOut: '📸 Chụp ảnh tan ca', photoId: '📸 Chụp ảnh ID', askPhoto: '📸 Vui lòng chụp ảnh ID', wrongInput: '❓ Làm theo hướng dẫn', regOk: '✅ Đăng ký xong!', inOk: '✅ Đi làm OK!', outOk: '✅ Tan ca OK!', help: '📋 Lệnh: Bắt đầu/Kết thúc/Hủy', noClockIn: '⚠️ Chưa chấm công', askRevenue: '💰 Nhập doanh số:', revenueOk: '✅ Đã ghi doanh số', welcome: 'Xin chào!', selectLang: 'Vui lòng chọn ngôn ngữ', helper: '✨ Bạn là trợ lý (Không cần KPI)', opener: '🎯 Bạn là người mở hàng', midshift: '🕒 Ca giữa, vui lòng nhập doanh số'}};\nconst lang = emp.Language || 'zh-TW';\nconst t = MSG[lang] || MSG['zh-TW'];\nlet tempData = {};\ntry { tempData = emp.temp_data ? JSON.parse(emp.temp_data) : {}; } catch(e) {}\nreturn { json: { ...input, emp, lang, t, MSG_DICT: MSG, isTimeout, step: emp.current_step || 'IDLE', tempData, pbParams, combinedAction: pbParams.action || '', combinedValue: pbParams.value || pbParams.store || '' } };"
+      },
+      "id": "0be1bf15-656f-4ca4-abe2-931a568096a8",
+      "name": "讀取狀態與翻譯",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3200,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "取消",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "03952d1c-e9d2-4719-bafc-4b470e9f0082"
+                  },
+                  {
+                    "leftValue": "={{ $json.combinedAction }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5cc708ca-8a99-424e-b429-fc6e5bf41543"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "取消"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "IDLE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "70b406cf-5b11-48f6-809a-2fea3cb9d703"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IDLE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_LANG",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4b23b7d4-b839-4a64-910d-d549868294d3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WAIT_LANG"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_STORE_IN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c19d5337-f1cf-4f67-8a34-5e9bf8294ba6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WAIT_STORE_IN"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_STORE_OUT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6946e0b7-8181-407f-8ed4-af3c67170987"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WAIT_STORE_OUT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_REVENUE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f3f547ba-bfb3-44fb-966b-8452bbcc37f0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WAIT_REVENUE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_REG",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8c77d41b-4895-4dc9-b5d1-50aa9aa81a87"
+                  },
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_IN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c44384d5-0f25-45a7-ac7c-04fdddf1cad1"
+                  },
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_OUT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a2ca53a9-d5c7-41a4-83e3-160fa137a4ab"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "WAIT_PHOTO"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "57705781-fbe5-4870-89c3-d1165f39533a",
+      "name": "狀態路由",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -2752,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $json.userId }}",
+            "current_step": "IDLE",
+            "temp_data": ""
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "74d709b5-0436-4c81-b0b5-a19498bca2a4",
+      "name": "重置(取消)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2528,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2,
+                  "combinator": "or"
+                },
+                "conditions": [
+                  {
+                    "id": "match-daka",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "打卡",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "match-punch",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "Punch",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "打卡"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2,
+                  "combinator": "or"
+                },
+                "conditions": [
+                  {
+                    "id": "match-shangban",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "上班",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "match-batdau",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "Bắt đầu",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "上班"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2,
+                  "combinator": "or"
+                },
+                "conditions": [
+                  {
+                    "id": "match-xiaban",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "下班",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "match-ketthuc",
+                    "leftValue": "={{ $json.msgText }}",
+                    "rightValue": "Kết thúc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "下班"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "f293673c-2941-4bb5-89f4-3d3dab79f6e4",
+      "name": "指令判斷",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -2528,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $json.userId }}",
+            "current_step": "WAIT_STORE_IN",
+            "temp_data": "上班",
+            "last_active": "={{ new Date().getTime() }}"
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "e89e909a-38ee-4172-9199-7db038b5b3d0",
+      "name": "設定等選店(上)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2256,
+        -320
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工工時紀錄",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "員工姓名",
+              "lookupValue": "={{ $json.emp.暱稱 }}"
+            },
+            {
+              "lookupColumn": "日期",
+              "lookupValue": "={{ new Date().getFullYear() + '/' + String(new Date().getMonth()+1).padStart(2,'0') + '/' + String(new Date().getDate()).padStart(2,'0') }}"
+            }
+          ]
+        },
+        "options": {
+          "includeRowNumber": true
+        }
+      },
+      "id": "0f0a9700-ade7-473a-b75a-4936eb23e794",
+      "name": "查詢今日打卡紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2352,
+        208
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-clockin",
+              "leftValue": "={{ $json.上班時間 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3859da2-6581-4679-b3c3-eda71d53bc92",
+      "name": "今日已打上班?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2096,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('讀取狀態與翻譯').item.json.userId }}",
+            "current_step": "WAIT_STORE_OUT",
+            "temp_data": "下班",
+            "last_active": "={{ new Date().getTime() }}"
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "68dcf3d9-0881-4761-be04-72cd4ea3fdaf",
+      "name": "設定等選店(下)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1872,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst store = d.combinedValue || d.pbParams.store || d.msgText;\nconst action = 'clockin';\nconst newTemp = JSON.stringify({ action, store });\nreturn { json: { ...d, store, action, newTemp } };"
+      },
+      "id": "286856ea-bed9-4583-8b88-e1df8c560ddc",
+      "name": "解析店名(上班)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "每日業績紀錄",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "店名",
+              "lookupValue": "={{ $json.store }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "891b5885-e8c6-4137-aa10-c406ca410f04",
+      "name": "查詢每日業績紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2320,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('解析店名(上班)').item.json;\nconst dailyRevRows = $input.all();\nconst store = prev.store;\n// 台灣時區 UTC+8\nconst now = new Date();\nconst twOffset = 8 * 60 * 60 * 1000;\nconst twNow = new Date(now.getTime() + twOffset);\nconst todayStr = `${twNow.getUTCFullYear()}/${String(twNow.getUTCMonth()+1).padStart(2,'0')}/${String(twNow.getUTCDate()).padStart(2,'0')}`;\nconst todayRecords = dailyRevRows.filter(r => {\n  const d = r.json['日期'] || '';\n  return d.includes(todayStr) || d.startsWith(`${twNow.getUTCMonth()+1}/${twNow.getUTCDate()}`);\n});\nlet clockInType = 'opener';\nlet openTime = null;\nif (todayRecords.length > 0 && todayRecords[0].json['開攤時間']) {\n  const openTimeStr = todayRecords[0].json['開攤時間'];\n  const match = openTimeStr.match(/(\\d{1,2}):(\\d{2})/);\n  if (match) {\n    let hour = parseInt(match[1]);\n    const min = parseInt(match[2]);\n    if (openTimeStr.includes('下午') && hour < 12) hour += 12;\n    const diffHr = (twNow.getUTCHours() * 60 + twNow.getUTCMinutes() - (hour * 60 + min)) / 60;\n    clockInType = diffHr < 1 ? 'helper' : 'midshift';\n  }\n}\nlet tempObj = {};\ntry { tempObj = JSON.parse(prev.newTemp); } catch(e) { tempObj = { raw: prev.newTemp }; }\nconst newTemp = JSON.stringify({ ...tempObj, store, clockInType, clockInTime: twNow.toISOString() });\nreturn { json: { ...prev, store, clockInType, hasOpenRecord: todayRecords.length > 0, newTemp } };"
+      },
+      "id": "0482e3d9-f7aa-4feb-9bda-adc78e39e89d",
+      "name": "判斷開攤狀態",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2096,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "combinator": "and"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.clockInType }}",
+                    "rightValue": "opener",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "首位開攤"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "combinator": "and"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.clockInType }}",
+                    "rightValue": "helper",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "小幫手"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "combinator": "and"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.clockInType }}",
+                    "rightValue": "midshift",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "中途上班"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d523aabc-204a-431f-a6ba-0815038b4550",
+      "name": "開攤類型路由",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -1872,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "每日業績紀錄",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "日期": "={{ new Date().getFullYear() + '/' + String(new Date().getMonth()+1).padStart(2,'0') + '/' + String(new Date().getDate()).padStart(2,'0') }}",
+            "店名": "={{ $json.store }}",
+            "開攤時間": "={{ new Date().toLocaleString('zh-TW') }}",
+            "紀錄者": "={{ $json.emp.暱稱 }}",
+            "紀錄時間": "={{ new Date().toLocaleString('zh-TW') }}"
+          },
+          "matchingColumns": [
+            "日期",
+            "店名"
+          ],
+          "schema": [
+            {
+              "id": "日期",
+              "displayName": "日期",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "店名",
+              "displayName": "店名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "開攤時間",
+              "displayName": "開攤時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "業績紀錄",
+              "displayName": "業績紀錄",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "最終結算",
+              "displayName": "最終結算",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "差異",
+              "displayName": "差異",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "紀錄者",
+              "displayName": "紀錄者",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "紀錄時間",
+              "displayName": "紀錄時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "c94fa186-a8bc-487e-8eb6-452f732008cd",
+      "name": "新增開攤紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1648,
+        256
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('判斷開攤狀態').item.json.userId }}",
+            "current_step": "WAIT_PHOTO_IN",
+            "temp_data": "={{ $('判斷開攤狀態').item.json.newTemp }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "UserID"
+          ],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "e83f6b79-19fc-4de4-9c6a-d512a796337b",
+      "name": "設定等照片(上)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1056,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('判斷開攤狀態').item.json.userId }}",
+            "current_step": "WAIT_REVENUE",
+            "temp_data": "中途",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "UserID"
+          ],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "27103aae-83dc-4c6e-8120-00d9396f7c5e",
+      "name": "設定等業績(中途)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1424,
+        432
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst store = d.combinedValue || d.pbParams.store || d.msgText;\nconst action = 'clockout';\nconst newTemp = JSON.stringify({ action, store });\nreturn { json: { ...d, store, action, newTemp } };"
+      },
+      "id": "766c6b3e-00b8-47fb-97be-2add395cd697",
+      "name": "解析店名(下班)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('解析店名(下班)').item.json;\nconst emp = prev.emp;\nlet helper = false;\n// 簡單判斷：若 current_step 曾記錄是 helper 或 tempData 裡有標記\nif (prev.t.helper) {/*不做額外判斷，由路由決定*/} \n// 這裡假設若為helper，不需業績\n// 實務上可到Google Sheet查今日上班若是helper則不需業績\nreturn { json: { ...prev } };"
+      },
+      "id": "97e6e580-b2cc-4917-a006-2580ec925725",
+      "name": "判斷是否需業績(下)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2304,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "need-rev",
+              "leftValue": "={{ $json.msgText }}",
+              "rightValue": "NO_NEED",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2775f0f3-b1d5-45ea-8c29-37380f277109",
+      "name": "需業績?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2096,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('判斷是否需業績(下)').item.json.userId }}",
+            "current_step": "WAIT_REVENUE",
+            "temp_data": "={{ $json.newTemp }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "UserID"
+          ],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "24960309-843b-4828-91ed-327c10b77b7f",
+      "name": "設定等業績(下)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1840,
+        512
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('判斷是否需業績(下)').item.json.userId }}",
+            "current_step": "WAIT_PHOTO_OUT",
+            "temp_data": "={{ $json.newTemp }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "UserID"
+          ],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "b3e9447e-85c8-479c-b17b-d0a51c4119d5",
+      "name": "設定等照片(下)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1840,
+        368
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst revenue = parseInt(d.msgText.replace(/\\D/g, '')) || 0;\nconst prevTemp = d.tempData || {};\nconst newTemp = JSON.stringify({ ...prevTemp, revenue });\nreturn { json: { ...d, revenue, newTemp } };"
+      },
+      "id": "84d5f470-3490-4886-af62-aa11b84cd123",
+      "name": "解析業績金額",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "每日業績紀錄",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "日期": "={{ new Date().getFullYear() + '/' + String(new Date().getMonth()+1).padStart(2,'0') + '/' + String(new Date().getDate()).padStart(2,'0') }}",
+            "店名": "={{ $json.tempData.store }}",
+            "業績紀錄": "={{ $json.revenue }}",
+            "紀錄者": "={{ $json.emp.暱稱 }}",
+            "紀錄時間": "={{ new Date().toLocaleString('zh-TW') }}"
+          },
+          "matchingColumns": [
+            "日期",
+            "店名"
+          ],
+          "schema": [
+            {
+              "id": "日期",
+              "displayName": "日期",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "店名",
+              "displayName": "店名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "開攤時間",
+              "displayName": "開攤時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "業績紀錄",
+              "displayName": "業績紀錄",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "最終結算",
+              "displayName": "最終結算",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "差異",
+              "displayName": "差異",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "紀錄者",
+              "displayName": "紀錄者",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "紀錄時間",
+              "displayName": "紀錄時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "4b6fc5df-7c87-43ca-9fc6-5743b3547844",
+      "name": "寫入業績紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2336,
+        640
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('讀取狀態與翻譯').item.json.tempData.action }}",
+                    "rightValue": "clockold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c76fb924-f5f4-41d9-8380-6060c41097e8"
+                  },
+                  {
+                    "leftValue": "={{ $('讀取狀態與翻譯').item.json.tempData.action }}",
+                    "rightValue": "clockout",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "75c32454-3e91-4566-a320-138374a2b251"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "下班流程"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "89b51fa5-6c17-4952-ba6c-850f7572620d",
+      "name": "決定下一步",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -2112,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('讀取狀態與翻譯').item.json.userId }}",
+            "current_step": "WAIT_PHOTO_OUT",
+            "temp_data": "={{ $('解析業績金額').item.json.newTemp }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "UserID"
+          ],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "暱稱",
+              "displayName": "暱稱",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "入職日",
+              "displayName": "入職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "離職日",
+              "displayName": "離職日",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "時薪",
+              "displayName": "時薪",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "證件照片",
+              "displayName": "證件照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "current_step",
+              "displayName": "current_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_data",
+              "displayName": "temp_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "0652750e-b2d9-48e0-bb12-8927909cd35e",
+      "name": "設定等照片(業績後)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1872,
+        640
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('擷取訊息資訊').item.json;\nconst postbackData = d.postbackData || '';\nlet lang = 'zh-TW';\n\n// 解析 Postback Data (例如: \"action=lang&value=vi-VN\")\nif (postbackData.includes('value=')) {\n  const match = postbackData.match(/value=([^&]+)/);\n  if (match && match[1]) {\n    lang = match[1];\n  }\n}\n\n// 若解析失敗或非合法值，預設 zh-TW\nif (lang !== 'vi-VN' && lang !== 'zh-TW') {\n    lang = 'zh-TW';\n}\n\nreturn { json: { ...d, lang } };"
+      },
+      "id": "e320f77d-77f6-4076-8806-0371a364d0d0",
+      "name": "解析語言選擇",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        56
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('擷取訊息資訊').item.json.userId }}",
+            "current_step": "WAIT_PHOTO_REG",
+            "Language": "={{ $json.lang }}",
+            "last_active": "={{ new Date().getTime() }}"
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "713997cc-b333-4fde-b565-d064cfb8070d",
+      "name": "儲存語言設定",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2304,
+        56
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api-data.line.me/v2/bot/message/' + $('擷取訊息資訊').item.json.msgId + '/content' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "id": "2bc98c19-6126-4ca9-ad20-7b587a8f3310",
+      "name": "下載LINE照片",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2256,
+        -160
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-image",
+              "leftValue": "={{ $json.msgType }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2d7b42aa-d421-4d37-84bc-07e335277416",
+      "name": "是否為照片",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2720,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst emp = d.emp || {};\nconst tempData = d.tempData || {};\nconst store = tempData.store || '';\nconst nickname = emp['暱稱'] || d.userId;\nconst step = emp.current_step;\n\n// 判斷動作\nlet action = '';\nif (step === 'WAIT_PHOTO_IN') action = '上班';\nelse if (step === 'WAIT_PHOTO_OUT') action = '下班';\nelse if (step === 'WAIT_PHOTO_REG') action = '註冊';\n\n// 格式化時間 (台灣時區 UTC+8)\nconst now = new Date(new Date().getTime() + 8 * 60 * 60 * 1000); // Shift to TW time roughly (or trust system time if already TW)\n// Better: just use simple UTC methods + 8 offset manually or string manipulation\n// Assuming n8n runs in UTC usually.\nconst twTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\n\nconst year = twTime.getFullYear();\nconst month = String(twTime.getMonth() + 1).padStart(2, '0');\nconst day = String(twTime.getDate()).padStart(2, '0');\nconst dateStr = `${year}/${month}/${day}`;\n\nlet hours = twTime.getHours();\nconst ampm = hours >= 12 ? '下午' : '上午';\nhours = hours % 12;\nhours = hours ? hours : 12;\nconst minutes = String(twTime.getMinutes()).padStart(2, '0');\nconst seconds = String(twTime.getSeconds()).padStart(2, '0');\nconst timeStr = `${ampm} ${hours}:${minutes}:${seconds}`;\n\n// 組合檔名\nlet prefix = '';\nif (store) prefix += `[${store}]`;\nprefix += `[${nickname}${action}]`;\n\nconst fileName = `${prefix} ${dateStr} ${timeStr}.jpg`;\n\nreturn { json: { ...d, fileName, dateStr, timeStr } };"
+      },
+      "id": "f5814521-82e4-411a-a1cc-c6cb9fcf8251",
+      "name": "生成檔名",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "fileContent": "={{ $binary.data }}",
+        "name": "={{ $('生成檔名').item.json.fileName }}",
+        "parents": [
+          "1N-wFv0JvB-51sU3bIG5v1GXe4huO2J8V"
+        ],
+        "options": {}
+      },
+      "id": "31ea2803-366a-4b95-a18a-f506e537e738",
+      "name": "上傳Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2000,
+        -160
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "eJwbv20hZJHx5y6W",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const drive = $input.item.json;\nconst driveLink = drive.webViewLink;\n// 取得最原始的input資料以知道當前step\nconst rootItem = $('讀取狀態與翻譯').item.json;\nconst step = rootItem.step;\n\n// 嘗試解析 temp_data 以取得 row_number (針對下班打卡)\nlet row_number = 0;\ntry {\n  const temp = typeof rootItem.temp_data === 'string' ? JSON.parse(rootItem.temp_data) : rootItem.temp_data;\n  if (temp && temp.row_number) {\n    row_number = parseInt(temp.row_number);\n  }\n} catch (e) {}\n\n// 從「生成檔名」節點取得日期時間資訊\nconst genFile = $('生成檔名').item.json;\nconst { dateStr, timeStr, fileName } = genFile;\nreturn { json: { step, driveLink, ...rootItem, dateStr, timeStr, fileName, row_number } };"
+      },
+      "id": "553f1729-e58f-4ed3-911e-8e4110842030",
+      "name": "準備結果資料",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1776,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_REG",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "304620f4-5f53-47a3-82a0-4742e43fec1a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "註冊"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_IN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a972c340-9f5b-430b-99f4-1875152fe4c3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "上班"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "rightValue": "WAIT_PHOTO_OUT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c1f727c6-f83c-4034-8c88-e9f3b55223c7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "下班"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b0a68393-705a-43a1-bed1-2a62883398c8",
+      "name": "動作路由",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -1552,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('擷取訊息資訊').item.json.userId }}",
+            "證件照片": "={{ $json.driveLink }}"
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {}
+      },
+      "id": "67406a12-850f-48d6-adf5-27a36de1770e",
+      "name": "完成註冊寫入",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1328,
+        -256
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工工時紀錄",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "日期": "={{ $json.dateStr }}",
+            "員工姓名": "={{ $json.emp['暱稱'] }}",
+            "店名": "={{ $json.tempData.store }}",
+            "上班時間": "={{ $json.timeStr }}",
+            "打卡照片": "={{ $json.driveLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "日期",
+              "displayName": "日期",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "員工姓名",
+              "displayName": "員工姓名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "店名",
+              "displayName": "店名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "上班時間",
+              "displayName": "上班時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "下班時間",
+              "displayName": "下班時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "工時",
+              "displayName": "工時",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "打卡照片",
+              "displayName": "打卡照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "業績回報",
+              "displayName": "業績回報",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e6f477e6-75aa-4560-844c-0c679a957262",
+      "name": "新增上班紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1328,
+        -144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工工時紀錄",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "下班時間": "={{ $json.timeStr }}",
+            "業績回報": "={{ $json.driveLink }}",
+            "row_number": "={{ $json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "日期",
+              "displayName": "日期",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "員工姓名",
+              "displayName": "員工姓名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "店名",
+              "displayName": "店名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "上班時間",
+              "displayName": "上班時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "下班時間",
+              "displayName": "下班時間",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "工時",
+              "displayName": "工時",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "打卡照片",
+              "displayName": "打卡照片",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "業績回報",
+              "displayName": "業績回報",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備註",
+              "displayName": "備註",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "7662c1cf-c211-4475-8167-27038e92f231",
+      "name": "更新下班紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1328,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('擷取訊息資訊').item.json.userId }}",
+            "current_step": "IDLE",
+            "temp_data": ""
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "3be93c9d-d81a-4720-bd75-4c07da00fcc1",
+      "name": "重置狀態(完成)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1104,
+        -160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "分店清單",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "4b684241-71fb-4293-85b3-fc79a86a6352",
+      "name": "讀取分店清單",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2000,
+        -320
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const stores = $('讀取分店清單').item.json || [];\n// 假設分店清單有「店名」欄位\n// 依需求可能有多個欄位，這裡只取店名\nconst items = [];\n// 若是來自 google sheets 讀取多筆，stores 可能是陣列或單筆\n// 在 n8n code node 中，$input.all() 取所有\nconst allStores = $('讀取分店清單').all().map(i => i.json['分店清單']).filter(n => n);\n\n// 建立 Quick Reply Items\nallStores.forEach(s => {\n  items.push({\n    type: 'action',\n    action: {\n      type: 'message',\n      label: s,\n      text: s\n    }\n  });\n});\n\n// 加上「取消」按鈕\nitems.push({\n  type: 'action',\n  action: {\n    type: 'postback',\n    label: '取消',\n    data: 'action=cancel'\n  }\n});\n\nconst root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\n\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'quickReply',\n    text: t.selectStore || '請選擇分店',\n    quickReplyItems: items\n  }\n};"
+      },
+      "id": "2a012053-911b-40aa-a957-e8549d41d91e",
+      "name": "組裝QuickReply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1776,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.replyType }}",
+                    "rightValue": "flex",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "90e2270a-fc8c-4ace-a1bf-58ec7bd7902d"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Flex"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.replyType }}",
+                    "rightValue": "quickReply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e4f8d55c-6091-4994-aff0-f2c253730248"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "QuickReply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.replyType }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9eb2ae51-fe44-4860-9113-41bbd067c293"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "23e59074-ce44-4690-84a1-026850c45963",
+      "name": "回覆類型判斷",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -688,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'flex', altText: $json.altText || $json.text, contents: $json.flexContents }] }) }}",
+        "options": {}
+      },
+      "id": "060d5bfa-51da-4bc5-8ff0-23a544521dd9",
+      "name": "統一Flex回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        112
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'text', text: $json.text, quickReply: { items: $json.quickReplyItems } }] }) }}",
+        "options": {}
+      },
+      "id": "1e2f3a4b-56cd-4d8e-90ab-1234567890ab",
+      "name": "統一QuickReply回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        288
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: 'text', text: $json.text }] }) }}",
+        "options": {}
+      },
+      "id": "89ab45cd-67ef-4890-12ab-3456789012cd",
+      "name": "統一文字回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        464
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst flowData = $('準備結果資料').item.json;\nconst t = root.t;\nconst step = flowData.step;\nconst store = flowData.tempData?.store || '';\nconst nowStr = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });\n\nlet msg = '';\nif (step === 'WAIT_PHOTO_REG') {\n  msg = t.regOk || '註冊成功';\n} else if (step === 'WAIT_PHOTO_IN') {\n  msg = (t.inOk || '上班打卡成功') + '\\n🏪 ' + store + '\\n⏰ ' + nowStr;\n} else if (step === 'WAIT_PHOTO_OUT') {\n  msg = (t.outOk || '下班打卡成功') + '\\n🏪 ' + store + '\\n⏰ ' + nowStr;\n} else {\n  msg = '操作成功';\n}\n\nconst flexContents = {\n  type: 'bubble',\n  body: {\n    type: 'box',\n    layout: 'vertical',\n    contents: [\n      { type: 'text', text: msg, weight: 'bold', size: 'lg', wrap: true, color: '#1DB446' }\n    ]\n  }\n};\n\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'flex',\n    text: msg,\n    altText: msg,\n    flexContents\n  }\n};"
+      },
+      "id": "901a0b5b-213c-4389-9b9a-4c8d5c7e6f8a",
+      "name": "準備回覆內容(成功)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.cancel\n  }\n};"
+      },
+      "id": "5a4b7c8d-90e1-42f2-8345-67890abcde12",
+      "name": "準備回覆(取消)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.help\n  }\n};"
+      },
+      "id": "12345678-90ab-cdef-1234-567890abcdef",
+      "name": "準備回覆(說明)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.noClockIn\n  }\n};"
+      },
+      "id": "abcdef12-3456-7890-abcd-ef1234567890",
+      "name": "準備回覆(未打卡)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1872,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.photoIn\n  }\n};"
+      },
+      "id": "98765432-10fe-dcba-9876-543210fedcba",
+      "name": "準備回覆(拍照上班)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.photoOut\n  }\n};"
+      },
+      "id": "fedcba98-7654-3210-fedc-ba9876543210",
+      "name": "準備回覆(拍照下班)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.midshift\n  }\n};"
+      },
+      "id": "a1b2c3d4-e5f6-7890-a1b2-c3d4e5f67890",
+      "name": "準備回覆(問業績中途)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1216,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.askRevenue\n  }\n};"
+      },
+      "id": "b2c3d4e5-f678-90a1-b2c3-d4e5f67890a1",
+      "name": "準備回覆(問業績下班)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.revenueOk + '\\n' + t.photoOut\n  }\n};"
+      },
+      "id": "c3d4e5f6-7890-a1b2-c3d4-e5f67890a1b2",
+      "name": "準備回覆(業績確認)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.askPhoto\n  }\n};"
+      },
+      "id": "d4e5f678-90a1-b2c3-d4e5-f67890a1b2c3",
+      "name": "準備回覆(證件照)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2096,
+        56
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.wrongInput\n  }\n};"
+      },
+      "id": "e5f67890-a1b2-c3d4-e5f6-7890a1b2c3d4",
+      "name": "準備回覆(錯誤)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2256,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工工時紀錄",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "員工姓名",
+              "lookupValue": "={{ $json.emp.暱稱 }}"
+            },
+            {
+              "lookupColumn": "日期",
+              "lookupValue": "={{ new Date().getFullYear() + '/' + String(new Date().getMonth()+1).padStart(2,'0') + '/' + String(new Date().getDate()).padStart(2,'0') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4169c9b1-50e4-4bc6-8739-122904c633a2",
+      "name": "查詢今日打卡紀錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -2352,
+        96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const records = $input.all();\nconst emp = $('讀取狀態與翻譯').item.json.emp;\n// 判斷是否已上班但未下班\n// records 包含今日所有該員工紀錄\n// 找一筆 \"上班時間\" 有值 但 \"下班時間\" 空的\nconst activeShift = records.find(r => r.json['上班時間'] && !r.json['下班時間']);\nconst clockInStatus = activeShift ? 'active' : 'none';\nlet row_number = 0;\nlet store = null;\nif (activeShift) {\n  // 優先使用 n8n 自動注入的 row_number，若無則嘗試從 json 屬性抓取\n  row_number = activeShift.json.row_number || activeShift.row_number || 0;\n  store = activeShift.json['店名'] || null;\n}\n\nreturn { json: { clockInStatus, row_number, store, emp, ...$('讀取狀態與翻譯').item.json } };"
+      },
+      "id": "78291f09-21a4-4458-baae-51421f12258d",
+      "name": "判斷上下班",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.clockInStatus }}",
+                    "rightValue": "none",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e458564b-b565-45ad-be96-1ed04b6b1070"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "上班"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.clockInStatus }}",
+                    "rightValue": "active",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0df61dc9-a9c1-4b13-a4da-872f2316e6f4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "下班"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1f56b7d-4560-4965-b732-5198030ab652",
+      "name": "上下班路由",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        -1840,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工管理",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UserID": "={{ $('上下班路由').item.json.userId }}",
+            "current_step": "WAIT_REVENUE",
+            "temp_data": "={{ JSON.stringify({ action: 'clockout', store: $json.store, row_number: $json.row_number }) }}",
+            "last_active": "={{ new Date().getTime() }}"
+          },
+          "matchingColumns": [
+            "UserID"
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "b0a68393-705a-43a1-bed1-2a62883398c8",
+      "name": "設定等業績(下班)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $('讀取狀態與翻譯').item.json;\nconst t = root.t;\nreturn {\n  json: {\n    replyToken: root.replyToken,\n    replyType: 'text',\n    text: t.askRevenue + ' ' + $('判斷上下班').item.json.store\n  }\n};"
+      },
+      "id": "b2c3d4e5-f678-90a1-b2c3-d4e5f67890a1",
+      "name": "準備回覆(問業績下班2)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "擷取訊息資訊",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "擷取訊息資訊": {
+      "main": [
+        [
+          {
+            "node": "查詢員工表",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢員工表": {
+      "main": [
+        [
+          {
+            "node": "員工是否存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "員工是否存在": {
+      "main": [
+        [
+          {
+            "node": "讀取狀態與翻譯",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "取得LINE個資",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得LINE個資": {
+      "main": [
+        [
+          {
+            "node": "建立新員工",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "建立新員工": {
+      "main": [
+        [
+          {
+            "node": "回覆語言選單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "回覆語言選單": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取狀態與翻譯": {
+      "main": [
+        [
+          {
+            "node": "狀態路由",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "狀態路由": {
+      "main": [
+        [
+          {
+            "node": "重置(取消)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "指令判斷",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "解析語言選擇",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "解析店名(上班)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "解析店名(下班)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "解析業績金額",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "是否為照片",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "重置(取消)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(取消)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "指令判斷": {
+      "main": [
+        [
+          {
+            "node": "查詢今日打卡紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "查詢今日打卡紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "查詢今日打卡紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "準備回覆(說明)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等選店(上)": {
+      "main": [
+        [
+          {
+            "node": "讀取分店清單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢今日上班紀錄": {
+      "main": [
+        [
+          {
+            "node": "今日已打上班?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "今日已打上班?": {
+      "main": [
+        [
+          {
+            "node": "設定等選店(下)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "準備回覆(未打卡)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等選店(下)": {
+      "main": [
+        [
+          {
+            "node": "讀取分店清單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析店名(上班)": {
+      "main": [
+        [
+          {
+            "node": "查詢每日業績紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢每日業績紀錄": {
+      "main": [
+        [
+          {
+            "node": "判斷開攤狀態",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷開攤狀態": {
+      "main": [
+        [
+          {
+            "node": "開攤類型路由",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "開攤類型路由": {
+      "main": [
+        [
+          {
+            "node": "新增開攤紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "設定等照片(上)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "設定等業績(中途)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增開攤紀錄": {
+      "main": [
+        [
+          {
+            "node": "設定等照片(上)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等照片(上)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(拍照上班)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等業績(中途)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(問業績中途)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析店名(下班)": {
+      "main": [
+        [
+          {
+            "node": "判斷是否需業績(下)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷是否需業績(下)": {
+      "main": [
+        [
+          {
+            "node": "需業績?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "需業績?": {
+      "main": [
+        [
+          {
+            "node": "設定等業績(下)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "設定等照片(下)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等業績(下)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(問業績下班)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等照片(下)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(拍照下班)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析業績金額": {
+      "main": [
+        [
+          {
+            "node": "寫入業績紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "寫入業績紀錄": {
+      "main": [
+        [
+          {
+            "node": "決定下一步",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "決定下一步": {
+      "main": [
+        [
+          {
+            "node": "設定等照片(業績後)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等照片(業績後)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(業績確認)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析語言選擇": {
+      "main": [
+        [
+          {
+            "node": "儲存語言設定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "儲存語言設定": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(證件照)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "下載LINE照片": {
+      "main": [
+        [
+          {
+            "node": "上傳Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否為照片": {
+      "main": [
+        [
+          {
+            "node": "生成檔名",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "準備回覆(錯誤)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "生成檔名": {
+      "main": [
+        [
+          {
+            "node": "下載LINE照片",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "上傳Drive": {
+      "main": [
+        [
+          {
+            "node": "準備結果資料",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備結果資料": {
+      "main": [
+        [
+          {
+            "node": "動作路由",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "動作路由": {
+      "main": [
+        [
+          {
+            "node": "完成註冊寫入",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "新增上班紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新下班紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "完成註冊寫入": {
+      "main": [
+        [
+          {
+            "node": "重置狀態(完成)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增上班紀錄": {
+      "main": [
+        [
+          {
+            "node": "重置狀態(完成)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新下班紀錄": {
+      "main": [
+        [
+          {
+            "node": "重置狀態(完成)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "重置狀態(完成)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆內容(成功)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取分店清單": {
+      "main": [
+        [
+          {
+            "node": "組裝QuickReply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "組裝QuickReply": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆內容(成功)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(取消)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(說明)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(未打卡)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(拍照上班)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(拍照下班)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(問業績中途)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(問業績下班)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(業績確認)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(證件照)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(錯誤)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "回覆類型判斷": {
+      "main": [
+        [
+          {
+            "node": "統一Flex回覆",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "統一QuickReply回覆",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "統一文字回覆",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢今日打卡紀錄": {
+      "main": [
+        [
+          {
+            "node": "判斷上下班",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷上下班": {
+      "main": [
+        [
+          {
+            "node": "上下班路由",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "上下班路由": {
+      "main": [
+        [
+          {
+            "node": "設定等選店(上)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "設定等業績(下班)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定等業績(下班)": {
+      "main": [
+        [
+          {
+            "node": "準備回覆(問業績下班2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備回覆(問業績下班2)": {
+      "main": [
+        [
+          {
+            "node": "回覆類型判斷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e6bf353f395904dafe49aea994919de0f3fad34808b813e6b38887371480eaeb"
+  }
+}

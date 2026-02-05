@@ -1,0 +1,6 @@
+temp/
+*.py
+*.txt
+merge_script.js
+unify_replies.js
+line-clock-in-bot-v14.json
