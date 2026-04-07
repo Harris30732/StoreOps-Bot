@@ -18,58 +18,12 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "userId",
-              "name": "userId",
-              "value": "={{ $json.body.events[0].source.userId }}",
-              "type": "string"
-            },
-            {
-              "id": "replyToken",
-              "name": "replyToken",
-              "value": "={{ $json.body.events[0].replyToken }}",
-              "type": "string"
-            },
-            {
-              "id": "eventType",
-              "name": "eventType",
-              "value": "={{ $json.body.events[0].type }}",
-              "type": "string"
-            },
-            {
-              "id": "msgType",
-              "name": "msgType",
-              "value": "={{ $json.body.events[0].message?.type || 'postback' }}",
-              "type": "string"
-            },
-            {
-              "id": "msgText",
-              "name": "msgText",
-              "value": "={{ $json.body.events[0].message?.text || '' }}",
-              "type": "string"
-            },
-            {
-              "id": "postbackData",
-              "name": "postbackData",
-              "value": "={{ $json.body.events[0].postback?.data || '' }}",
-              "type": "string"
-            },
-            {
-              "id": "msgId",
-              "name": "msgId",
-              "value": "={{ $json.body.events[0].message?.id || '' }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const { DateTime } = require('luxon');\nconst body = $input.item.json.body;\nconst event = body.events[0];\n\nconst userId = event.source.userId;\nconst replyToken = event.replyToken;\nconst eventType = event.type;\nconst msgType = event.message?.type || 'postback';\nconst msgText = event.message?.text || '';\nconst postbackData = event.postback?.data || '';\nconst msgId = event.message?.id || '';\n\n// Timezone Logic (Asia/Taipei)\nconst now = DateTime.now().setZone('Asia/Taipei');\n// Work Day Threshold: 6 AM (If before 6AM, count as previous day)\nconst workDate = now.hour < 6 ? now.minus({ days: 1 }) : now;\nconst workDay = workDate.toFormat('yyyy/MM/dd');\n\nreturn {\n  json: {\n    userId,\n    replyToken,\n    eventType,\n    msgType,\n    msgText,\n    postbackData,\n    msgId,\n    workDay,\n    timestamp: now.toMillis()\n  }\n};"
       },
       "id": "72ee5a0c-d0aa-4549-a62a-fd948596f7cd",
       "name": "擷取訊息資訊",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         -3856,
         208
@@ -772,7 +726,7 @@
             },
             {
               "lookupColumn": "日期",
-              "lookupValue": "={{ new Date().getFullYear() + '/' + String(new Date().getMonth()+1).padStart(2,'0') + '/' + String(new Date().getDate()).padStart(2,'0') }}"
+              "lookupValue": "={{ $('擷取訊息資訊').item.json.workDay }}"
             }
           ]
         },
@@ -2304,7 +2258,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.item.json;\nconst emp = d.emp || {};\nconst tempData = d.tempData || {};\nconst store = tempData.store || '';\nconst nickname = emp['暱稱'] || d.userId;\nconst step = emp.current_step;\n\n// 判斷動作\nlet action = '';\nif (step === 'WAIT_PHOTO_IN') action = '上班';\nelse if (step === 'WAIT_PHOTO_OUT') action = '下班';\nelse if (step === 'WAIT_PHOTO_REG') action = '註冊';\n\n// 格式化時間 (台灣時區 UTC+8)\nconst now = new Date(new Date().getTime() + 8 * 60 * 60 * 1000); // Shift to TW time roughly (or trust system time if already TW)\n// Better: just use simple UTC methods + 8 offset manually or string manipulation\n// Assuming n8n runs in UTC usually.\nconst twTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\n\nconst year = twTime.getFullYear();\nconst month = String(twTime.getMonth() + 1).padStart(2, '0');\nconst day = String(twTime.getDate()).padStart(2, '0');\nconst dateStr = `${year}/${month}/${day}`;\n\nlet hours = twTime.getHours();\nconst ampm = hours >= 12 ? '下午' : '上午';\nhours = hours % 12;\nhours = hours ? hours : 12;\nconst minutes = String(twTime.getMinutes()).padStart(2, '0');\nconst seconds = String(twTime.getSeconds()).padStart(2, '0');\nconst timeStr = `${ampm} ${hours}:${minutes}:${seconds}`;\n\n// 組合檔名\nlet prefix = '';\nif (store) prefix += `[${store}]`;\nprefix += `[${nickname}${action}]`;\n\nconst fileName = `${prefix} ${dateStr} ${timeStr}.jpg`;\n\nreturn { json: { ...d, fileName, dateStr, timeStr } };"
+        "jsCode": "const { DateTime } = require('luxon');\nconst d = $input.item.json;\nconst emp = d.emp || {};\nconst tempData = d.tempData || {};\nconst store = tempData.store || '';\nconst nickname = emp['暱稱'] || d.userId;\nconst step = emp.current_step;\n\n// 判斷動作\nlet action = '';\nif (step === 'WAIT_PHOTO_IN') action = '上班';\nelse if (step === 'WAIT_PHOTO_OUT') action = '下班';\nelse if (step === 'WAIT_PHOTO_REG') action = '註冊';\n\n// 格式化時間 (台灣時區)\nconst twTime = DateTime.now().setZone('Asia/Taipei');\nconst dateStr = twTime.toFormat('yyyy/MM/dd');\nconst timeStr = twTime.toFormat('TT'); // e.g. 02:30:00 PM\n// Manual am/pm format if needed or use standard\nconst ampm = twTime.hour >= 12 ? '下午' : '上午';\nconst hour12 = twTime.hour % 12 || 12;\nconst min = twTime.minute.toString().padStart(2, '0');\nconst sec = twTime.second.toString().padStart(2, '0');\nconst customTimeStr = `${ampm} ${hour12}:${min}:${sec}`;\n\n// 組合檔名\nlet prefix = '';\nif (store) prefix += `[${store}]`;\nprefix += `[${nickname}${action}]`;\n\nconst fileName = `${prefix} ${dateStr} ${customTimeStr}.jpg`;\n\nreturn { json: { ...d, fileName, dateStr, timeStr: customTimeStr } };"
       },
       "id": "f5814521-82e4-411a-a1cc-c6cb9fcf8251",
       "name": "生成檔名",
@@ -3334,9 +3288,66 @@
         -1280,
         80
       ]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $('擷取訊息資訊').item.json.replyToken, messages: [{ type: 'text', text: '⚠️ 系統暫時無法回應，請稍後再試。' }] }) }}",
+        "options": {}
+      },
+      "id": "error-reply",
+      "name": "報錯回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        1000
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
     }
   ],
   "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "報錯回覆",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "LINE Webhook": {
       "main": [
         [

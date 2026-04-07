@@ -1,0 +1,1027 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-hr",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { DateTime } = require('luxon');\nconst body = $input.item.json.body;\nconst events = body.events || [];\n\nif (events.length === 0) {\n  return { json: { error: 'no_events' } };\n}\n\nconst evt = events[0];\n// 使用 Luxon 設定台灣時間\nconst now = DateTime.now().setZone('Asia/Taipei');\n\n// 計算工作日（早上6點為分界線）\nconst workDate = now.hour < 6 ? now.minus({ days: 1 }) : now;\n\nconst workDay = workDate.toFormat('yyyy/MM/dd');\nconst shortDate = workDate.toFormat('MM/dd');\nconst currentTime = now.toFormat('HH:mm:ss');\nconst realDate = now.toFormat('yyyy/MM/dd');\nconst fullTimestamp = `${realDate} ${currentTime}`;\n\nconst msgType = evt.message?.type || evt.type;\nconst replyToken = evt.replyToken;\nconst userId = evt.source?.userId || '';\nlet msgText = '';\nlet msgId = '';\nlet postbackData = '';\n\nif (msgType === 'message' && evt.message.type === 'text') {\n  msgText = evt.message.text || '';\n  msgId = evt.message.id;\n} else if (msgType === 'message' && evt.message.type === 'image') {\n  msgId = evt.message.id;\n} else if (evt.type === 'postback') {\n  postbackData = evt.postback?.data || '';\n}\n\n// 解析 Postback 參數\nconst pbParams = {};\npostbackData.split('&').forEach(p => { \n  const [k, v] = p.split('='); \n  if (k && v) pbParams[k] = decodeURIComponent(v); \n});\n\nreturn {\n  json: {\n    msgType,\n    msgText,\n    msgId,\n    postbackData,\n    postbackAction: pbParams.action || '',\n    postbackValue: pbParams.value || '',\n    replyToken,\n    userId,\n    workDay,\n    shortDate,\n    currentTime,\n    realDate,\n    fullTimestamp,\n    timestamp: now.toMillis()\n  }\n};"
+      },
+      "name": "統一前置處理",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工資料",
+          "mode": "name"
+        },
+        "lookupColumn": "UserID",
+        "lookupValue": "={{ $json.userId }}",
+        "options": {}
+      },
+      "name": "查詢員工資料",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('統一前置處理').item.json;\nconst emp = $input.item.json;\n\n// 檢查是否為新員工\nconst isNewUser = !emp.UserID;\n\nif (isNewUser) {\n  return { \n    json: { \n      ...prev, \n      route: 'new_user',\n      emp: {}\n    } \n  };\n}\n\n// 讀取員工狀態\nlet step = emp.current_step || 'IDLE';\nlet tempData = {};\ntry {\n  tempData = JSON.parse(emp.temp_data || '{}');\n} catch(e) {\n  tempData = {};\n}\n\n// 逾時邏輯 (10分鐘 = 600000 毫秒)\nconst lastActive = parseInt(emp.last_active || 0);\nconst nowMillis = prev.timestamp;\nif (step !== 'IDLE' && (nowMillis - lastActive) > 600000) {\n  step = 'IDLE';\n}\n\n// 載入翻譯\nconst lang = emp.Language || 'zh-TW';\nconst translations = {\n  'zh-TW': {\n    selectStore: '📍 請選擇門市:',\n    askRevenue: '💰 請輸入當前業績 (純數字):',\n    photoIn: '📸 請上傳上班照片',\n    photoOut: '📸 請上傳下班照片',\n    cancel: '❌ 已取消操作',\n    clockInSuccess: '✅ 上班打卡成功！',\n    clockOutSuccess: '✅ 下班打卡成功！',\n    invalidNumber: '❌ 請輸入有效的數字',\n    welcome: '✅ 語言設定完成！\\n\\n📋 使用說明：\\n• 輸入「打卡」開始/結束工作\\n• 系統會自動判斷上下班\\n\\n祝您工作順利！💪'\n  },\n  'vi-VN': {\n    selectStore: '📍 Vui lòng chọn cửa hàng:',\n    askRevenue: '💰 Nhập doanh thu hiện tại (chỉ số):',\n    photoIn: '📸 Tải ảnh chấm công vào',\n    photoOut: '📸 Tải ảnh chấm công ra',\n    cancel: '❌ Đã hủy',\n    clockInSuccess: '✅ Chấm công vào thành công!',\n    clockOutSuccess: '✅ Chấm công ra thành công!',\n    invalidNumber: '❌ Vui lòng nhập số hợp lệ',\n    welcome: '✅ Đã cài ngôn ngữ!\\n\\n📋 Hướng dẫn:\\n• Nhập \"Chấm công\" để bắt đầu/kết thúc\\n• Hệ thống tự động phân biệt\\n\\nChúc làm việc vui!'\n  }\n};\nconst t = translations[lang];\n\n// 路由邏輯\n\n// 1. 取消操作\nif (prev.postbackAction === 'cancel') {\n  return { json: { ...prev, emp, route: 'cancel', t } };\n}\n\n// 2. 語言選擇\nif (step === 'WAIT_LANG' && prev.postbackAction === 'lang') {\n  return { json: { ...prev, emp, route: 'set_language', selectedLang: prev.postbackValue, t } };\n}\n\n// 3. 等待選擇門市\nif (step === 'WAIT_STORE' && prev.postbackAction === 'select_store') {\n  return { json: { ...prev, emp, route: 'store_selected', store: prev.postbackValue, tempData, t } };\n}\n\n// 4. 等待輸入業績\nif (step === 'WAIT_REVENUE' && prev.msgType === 'text') {\n  return { json: { ...prev, emp, route: 'revenue_input', tempData, t } };\n}\n\n// 5. 等待上傳照片\nif (step === 'WAIT_PHOTO' && prev.msgType === 'image') {\n  return { json: { ...prev, emp, route: 'photo_uploaded', tempData, t } };\n}\n\n// 6. IDLE 狀態 - 判斷打卡指令\nif (step === 'IDLE' && (prev.msgText === '打卡' || prev.msgText === 'Chấm công')) {\n  return { json: { ...prev, emp, route: 'start_clock', tempData, t } };\n}\n\n// 7. 未知/其他\nreturn { \n  json: { \n    ...prev, \n    emp, \n    route: 'unknown', \n    t \n  },\n  // 如果發生逾時重置，需要持久化 IDLE 狀態\n  ...(step === 'IDLE' && emp.current_step !== 'IDLE' ? {\n      json: {\n        ...prev,\n        emp,\n        route: 'unknown',\n        t,\n        updateEmployeeData: {\n            UserID: emp.UserID,\n            current_step: 'IDLE',\n            temp_data: ''\n        }\n      }\n  } : {})\n};"
+      },
+      "name": "超級路由",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "value": "new_user",
+              "outputKey": "新員工"
+            },
+            {
+              "value": "set_language",
+              "outputKey": "設定語言"
+            },
+            {
+              "value": "start_clock",
+              "outputKey": "開始打卡"
+            },
+            {
+              "value": "store_selected",
+              "outputKey": "門市已選"
+            },
+            {
+              "value": "revenue_input",
+              "outputKey": "業績輸入"
+            },
+            {
+              "value": "photo_uploaded",
+              "outputKey": "照片已上傳"
+            },
+            {
+              "value": "cancel",
+              "outputKey": "取消"
+            }
+          ]
+        },
+        "dataProperty": "route",
+        "fallbackOutput": 7
+      },
+      "name": "狀態分流",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{\n      type: 'text',\n      text: '👋 歡迎！請選擇您的語言 / Chọn ngôn ngữ:',\n      quickReply: {\n        items: [\n          { type: 'action', action: { type: 'postback', label: '🇹🇼 中文', data: 'action=lang&value=zh-TW' } },\n          { type: 'action', action: { type: 'postback', label: '🇻🇳 Tiếng Việt', data: 'action=lang&value=vi-VN' } }\n        ]\n      }\n    }],\n    updateEmployeeData: {\n        UserID: d.userId,\n        current_step: 'WAIT_LANG',\n        temp_data: ''\n    }\n  }\n};"
+      },
+      "name": "新員工歡迎",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst selectedLang = d.selectedLang;\nconst t = d.t;\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{ type: 'text', text: t.welcome }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      暱稱: d.emp['暱稱'] || '新員工',\n      Language: selectedLang,\n      current_step: 'IDLE',\n      temp_data: ''\n    }\n  }\n};"
+      },
+      "name": "設定語言",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getMany",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工工時紀錄",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "日期",
+              "lookupValue": "={{ $json.workDay }}"
+            },
+            {
+              "lookupColumn": "員工姓名",
+              "lookupValue": "={{ $json.emp['暱稱'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "查詢今日打卡",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        -200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t;\nconst records = $input.all();\n\nlet hasUnfinishedClock = false;\nlet attendanceRowNumber = null;\nlet clockInTime = null;\nlet store = null;\n\nfor (const record of records) {\n  if (!record.json['下班時間'] || record.json['下班時間'] === '') {\n    hasUnfinishedClock = true;\n    attendanceRowNumber = record.json.row_number; \n    if (!attendanceRowNumber) attendanceRowNumber = record.params?.rowNumber; \n\n    clockInTime = record.json['上班時間'];\n    store = record.json['店名'];\n    break;\n  }\n}\n\nif (hasUnfinishedClock) {\n  return { json: { ...d, action: 'clockout', attendanceRowNumber, clockInTime, store } };\n} else {\n  return { json: { ...d, action: 'clockin' } };\n}\n"
+      },
+      "name": "判斷上下班",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "clockin",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "檢查動作類型",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t;\nconst stores = ['板橋店', '土城店', '三重店', '新莊店'];\n\nconst quickReplyItems = stores.map(store => ({\n  type: 'action',\n  action: { type: 'postback', label: store, data: `action=select_store&value=${encodeURIComponent(store)}` }\n}));\n\nquickReplyItems.push({\n  type: 'action',\n  action: { type: 'postback', label: '❌ 取消', data: 'action=cancel' }\n});\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{ type: 'text', text: t.selectStore, quickReply: { items: quickReplyItems } }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'WAIT_STORE',\n      temp_data: JSON.stringify({ action: 'clockin' })\n    }\n  }\n};"
+      },
+      "name": "生成門市選單",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        -250
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getMany",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "每日業績紀錄",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "日期",
+              "lookupValue": "={{ $json.shortDate }}"
+            },
+            {
+              "lookupColumn": "店名",
+              "lookupValue": "={{ $json.store }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "查詢今日業績",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        -100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t;\nconst store = d.store;\nconst revenueRecords = $input.all();\n\nlet clockInType = 'midshift';\nlet revenueRowNumber = null;\nlet revenue = null;\n\nif (revenueRecords.length === 0) {\n  clockInType = 'opener';\n} else {\n  const hasRevenue = revenueRecords[0].json['開攤時間'];\n  if (hasRevenue) {\n    clockInType = 'helper'; \n  } else {\n    revenueRowNumber = revenueRecords[0].json.row_number;\n    revenue = revenueRecords[0].json['當前業績'] || 0;\n  }\n}\n\nreturn {\n  json: {\n    ...d,\n    clockInType,\n    revenueRowNumber,\n    revenue,\n    replyMessages: [{\n      type: 'text',\n      text: t.photoIn,\n      quickReply: { items: [{ type: 'action', action: { type: 'postback', label: '❌ 取消', data: 'action=cancel' } }] }\n    }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'WAIT_PHOTO',\n      temp_data: JSON.stringify({ action: 'clockin', store, clockInType, revenueRowNumber, revenue })\n    }\n  }\n};"
+      },
+      "name": "準備上班照片請求",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t;\nconst revenue = d.msgText.trim();\n\nif (!/^\\d+$/.test(revenue)) {\n  return {\n    json: {\n      ...d,\n      replyMessages: [{ type: 'text', text: t.invalidNumber }]\n    }\n  };\n}\n\nreturn {\n  json: {\n    ...d,\n    revenue: parseInt(revenue),\n    replyMessages: [{\n      type: 'text',\n      text: t.photoOut,\n      quickReply: { items: [{ type: 'action', action: { type: 'postback', label: '❌ 取消', data: 'action=cancel' } }] }\n    }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'WAIT_PHOTO',\n      temp_data: JSON.stringify({\n        action: 'clockout',\n        store: d.tempData.store,\n        attendanceRowNumber: d.tempData.attendanceRowNumber,\n        clockInTime: d.tempData.clockInTime,\n        revenue: parseInt(revenue)\n      })\n    }\n  }\n};"
+      },
+      "name": "業績輸入驗證",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t;\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{\n      type: 'text',\n      text: t.askRevenue,\n      quickReply: { items: [{ type: 'action', action: { type: 'postback', label: '❌ 取消', data: 'action=cancel' } }] }\n    }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'WAIT_REVENUE',\n      temp_data: JSON.stringify({\n        action: 'clockout',\n        store: d.store,\n        attendanceRowNumber: d.attendanceRowNumber,\n        clockInTime: d.clockInTime\n      })\n    }\n  }\n};"
+      },
+      "name": "準備下班照片請求",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ \"https://api-data.line.me/v2/bot/message/\" + $json.msgId + \"/content\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "下載照片",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "fileContent": "data",
+        "parentId": {
+          "__rl": true,
+          "value": "1k4rfsjHYYXO8He7MUbTZoNJivDJkcn2a",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "name": "上傳至 Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1000,
+        400
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://www.googleapis.com/drive/v3/files/\" + $json.id + \"/permissions\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"role\": \"reader\", \"type\": \"anyone\"}",
+        "options": {}
+      },
+      "name": "設定 Drive 權限",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        400
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst tempData = d.tempData || {};\nconst action = tempData.action;\nconst t = d.t;\n\nconst photoUrl = $('上傳至 Drive').item.json.webViewLink || `https://api.line.me/v2/bot/message/${d.msgId}/content`;\n\nlet sheetUpdates = [];\nlet successMsg = '';\n\nif (action === 'clockin') {\n  const store = tempData.store;\n  const clockInType = tempData.clockInType;\n  const revenueRowNumber = tempData.revenueRowNumber;\n\n  if (clockInType === 'opener') {\n    sheetUpdates.push({\n      type: 'revenue_append',\n      sheetId: '每日業績紀錄',\n      data: {\n        '日期': d.shortDate,\n        '店名': store,\n        '開攤時間': d.currentTime.substring(0, 5),\n        '操作記錄': `[${d.emp['暱稱']}][開攤][${d.fullTimestamp}]`\n      }\n    });\n  } else if (clockInType === 'midshift' && tempData.revenue) {\n    sheetUpdates.push({\n      type: 'revenue_update',\n      sheetId: '每日業績紀錄',\n      rowNumber: revenueRowNumber,\n      data: {\n        '操作記錄': `[${d.emp['暱稱']}][中途上班][當前業績:${tempData.revenue}][${d.fullTimestamp}]`\n      }\n    });\n  }\n\n  const remark = clockInType === 'helper' ? '小幫手(免業績)' : '';\n  sheetUpdates.push({\n    type: 'attendance_append',\n    sheetId: '員工工時紀錄',\n    data: {\n      '日期': d.workDay,\n      '員工姓名': d.emp['暱稱'],\n      '店名': store,\n      '上班時間': d.currentTime,\n      '下班時間': '',\n      '工時': '',\n      '打卡記錄': `[上班][${d.fullTimestamp}][${photoUrl}]`,\n      '業績記錄': '',\n      '備註': remark\n    }\n  });\n\n  successMsg = `${t.clockInSuccess}\\n📍 店名: ${store}\\n⏰ 時間: ${d.currentTime}\\n📝 類型: ${clockInType === 'opener' ? '首位開攤' : clockInType === 'helper' ? '小幫手' : '中途上班'}`;\n\n} else {\n  const store = tempData.store;\n  const attendanceRowNumber = tempData.attendanceRowNumber;\n  const clockInTime = tempData.clockInTime;\n  const revenue = tempData.revenue || 0;\n\n  function parseTime(timeStr) {\n    if (!timeStr) return 0;\n    const [hour, min, sec] = timeStr.split('').map(Number);\n    return (hour||0) * 3600 + (min||0) * 60 + (sec || 0);\n  }\n\n  const inSeconds = parseTime(clockInTime);\n  const outSeconds = parseTime(d.currentTime);\n  let workSeconds = outSeconds - inSeconds;\n  if (workSeconds < 0) workSeconds += 24 * 3600;\n\n  const workHours = (workSeconds / 3600).toFixed(2);\n  const hours = Math.floor(workSeconds / 3600);\n  const minutes = Math.floor((workSeconds % 3600) / 60);\n  const workTimeDisplay = `${hours}小時${minutes}分`;\n\n  sheetUpdates.push({\n    type: 'attendance_update',\n    sheetId: '員工工時紀錄',\n    rowNumber: attendanceRowNumber,\n    data: {\n      '下班時間': d.currentTime,\n      '工時': workHours,\n      '打卡記錄': `[下班][${d.fullTimestamp}][${photoUrl}]`,\n      '業績記錄': `${revenue}`\n    }\n  });\n\n  successMsg = `${t.clockOutSuccess}\\n📍 店名: ${store}\\n⏰ 上班: ${clockInTime}\\n⏰ 下班: ${d.currentTime}\\n⏱️ 工時: ${workTimeDisplay}\\n💰 業績: ${revenue}`;\n}\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{ type: 'text', text: successMsg }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'IDLE',\n      temp_data: ''\n    },\n    sheetUpdates\n  }\n};"
+      },
+      "name": "處理照片上傳",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst t = d.t || { cancel: '❌ Cancelled' }; // Fallback\n\nreturn {\n  json: {\n    ...d,\n    replyMessages: [{ type: 'text', text: t.cancel }],\n    updateEmployeeData: {\n      UserID: d.userId,\n      current_step: 'IDLE',\n      temp_data: ''\n    }\n  }\n};"
+      },
+      "name": "處理取消",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "name": "匯總合併",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "員工資料",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {
+          "lookupColumn": "UserID"
+        }
+      },
+      "name": "更新員工狀態",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2400,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst sheetUpdates = d.sheetUpdates || [];\n\nif (sheetUpdates.length === 0) {\n  return { json: { ...d, skipSheetUpdates: true } };\n}\n\nreturn sheetUpdates.map(update => ({\n  json: {\n    ...d,\n    updateType: update.type,\n    targetSheet: update.sheetId,\n    targetRow: update.rowNumber,\n    ...update.data\n  }\n}));"
+      },
+      "name": "準備試算表更新",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "value": "append",
+              "outputKey": "新增"
+            }
+          ]
+        },
+        "dataProperty": "updateType",
+        "fallbackOutput": 1
+      },
+      "name": "判斷更新類型",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.targetSheet }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {}
+      },
+      "name": "新增記錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3000,
+        -100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ILgphAVTKI5KIpCJKrT5anlF4GQK8YoHf8JAtAnMN7o",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.targetSheet }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {
+          "lookupColumn": "row_number"
+        }
+      },
+      "name": "更新記錄",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3000,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ybn4LezMchfmzj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: $json.replyMessages }) }}",
+        "options": {}
+      },
+      "name": "回覆 LINE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        0
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"ok\", \"timestamp\": $now } }}"
+      },
+      "name": "Webhook 回應",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3500,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "錯誤觸發",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "lineMessagingApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $('統一前置處理').item.json.replyToken, messages: [{ type: 'text', text: '⚠️ 系統接獲異常，請稍後再試。/ System Error' }] }) }}",
+        "options": {}
+      },
+      "name": "錯誤回覆",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        1000
+      ],
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "UiiMHjlAZGMI80LW",
+          "name": "打卡機器人"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "統一前置處理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "統一前置處理": {
+      "main": [
+        [
+          {
+            "node": "查詢員工資料",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢員工資料": {
+      "main": [
+        [
+          {
+            "node": "超級路由",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "超級路由": {
+      "main": [
+        [
+          {
+            "node": "狀態分流",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "狀態分流": {
+      "main": [
+        [
+          {
+            "node": "新員工歡迎",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "設定語言",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "查詢今日打卡",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "查詢今日業績",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "業績輸入驗證",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "下載照片",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "處理取消",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢今日打卡": {
+      "main": [
+        [
+          {
+            "node": "判斷上下班",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷上下班": {
+      "main": [
+        [
+          {
+            "node": "檢查動作類型",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "檢查動作類型": {
+      "main": [
+        [
+          {
+            "node": "生成門市選單",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "準備下班照片請求",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢今日業績": {
+      "main": [
+        [
+          {
+            "node": "準備上班照片請求",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "下載照片": {
+      "main": [
+        [
+          {
+            "node": "上傳至 Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "上傳至 Drive": {
+      "main": [
+        [
+          {
+            "node": "設定 Drive 權限",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定 Drive 權限": {
+      "main": [
+        [
+          {
+            "node": "處理照片上傳",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新員工歡迎": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "設定語言": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "生成門市選單": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備上班照片請求": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "業績輸入驗證": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備下班照片請求": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "處理照片上傳": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "處理取消": {
+      "main": [
+        [
+          {
+            "node": "匯總合併",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "匯總合併": {
+      "main": [
+        [
+          {
+            "node": "更新員工狀態",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新員工狀態": {
+      "main": [
+        [
+          {
+            "node": "準備試算表更新",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "準備試算表更新": {
+      "main": [
+        [
+          {
+            "node": "判斷更新類型",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷更新類型": {
+      "main": [
+        [
+          {
+            "node": "新增記錄",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新記錄",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增記錄": {
+      "main": [
+        [
+          {
+            "node": "回覆 LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新記錄": {
+      "main": [
+        [
+          {
+            "node": "回覆 LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "回覆 LINE": {
+      "main": [
+        [
+          {
+            "node": "Webhook 回應",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "錯誤觸發": {
+      "main": [
+        [
+          {
+            "node": "錯誤回覆",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "generated-v16-optimized-tc"
+  }
+}

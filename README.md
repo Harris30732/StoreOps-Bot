@@ -1,7 +1,8 @@
-<<<<<<< HEAD
 # LINE 打卡機器人 v15 (n8n Workflow) - StoreOps Bot
 
 這是一個基於 n8n 開發的進階 LINE 打卡系統，支援多門市管理、業績回報、拍照存證以及 Google Sheets 自動紀錄。
+
+> **最新架構文檔**: 請參考 [Architecture.md](Architecture.md) 獲取完整系統架構與節點配置說明。
 
 ## 🌟 主要功能
 - **全自動打卡流程**：上班/下班/中途打卡。
@@ -12,10 +13,11 @@
 - **異常預防**：自動校正 Google Sheet 資料行數與日期格式，避免重複紀錄或更新失敗。
 
 ## 📁 檔案說明
-- `line-clock-in-bot-v15-unified.json`: 最終整合完成的 n8n 工作流檔案。
+- `@line-clock-in-bot-v16-final.json`: 最終整合完成的 n8n 工作流檔案。
+- `Architecture.md`: 完整系統架構文檔。
 
 ## 🚀 如何使用
-1. 在 n8n 中點擊 "Import from File" 並選擇 `line-clock-in-bot-v15-unified.json`。
+1. 在 n8n 中點擊 "Import from File" 並選擇 JSON 檔案。
 2. 配置相關認證 (Credentials)：
    - Google Sheets API
    - LINE Messaging API
@@ -26,6 +28,3 @@
 - 本版本已修正 `E0` 行數錯誤以及日期格式不一致導致的重複紀錄問題。
 - 採用 `YYYY/MM/DD` 作為跨節點的標準日期比對格式。
 - 工作流中包含自動錯誤導引至 FALLBACK 的處理邏輯。
-=======
-# R-
->>>>>>> 861d14699afd7115f577fccdeb6c02669d8baacf
